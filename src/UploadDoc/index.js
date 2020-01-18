@@ -1,5 +1,5 @@
 import React, { Component } from "react";
-import readXlsxFile from "read-excel-file";
+import XLSX from "xlsx";
 import ViewDoc from "../ViewDoc";
 
 export default class UploadDoc extends Component {
@@ -11,6 +11,35 @@ export default class UploadDoc extends Component {
       isSubmitted: false
     };
   }
+
+  handleFile(file) {
+    /* Boilerplate to set up FileReader */
+    const reader = new FileReader();
+    const rABS = reader.readAsBinaryString;
+
+    reader.onload = e => {
+      /* Parse data */
+      const bstr = e.target.result;
+      const wb = XLSX.read(bstr, {
+        type: rABS ? "binary" : "array",
+        bookVBA: true
+      });
+      /* Get first worksheet */
+      const wsname = wb.SheetNames[0];
+      const ws = wb.Sheets[wsname];
+      /* Convert array of arrays */
+      const data = XLSX.utils.sheet_to_json(ws);
+      /* Update state */
+      this.setState({ data });
+    };
+
+    if (rABS) {
+      reader.readAsBinaryString(file);
+    } else {
+      reader.readAsArrayBuffer(file);
+    }
+  }
+
   render() {
     const { data, isSubmitted } = this.state;
     return (
@@ -21,9 +50,7 @@ export default class UploadDoc extends Component {
           name="Browse"
           onChange={event => {
             event.preventDefault();
-            readXlsxFile(event.target.files[0]).then(rows => {
-              this.setState({ data: rows, isSubmitted: false });
-            });
+            this.handleFile(event.target.files[0]);
           }}
         />
         {data.length > 0 && (
